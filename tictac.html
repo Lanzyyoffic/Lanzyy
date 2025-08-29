@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Tic Tac Toe Animasi Lengkap</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: linear-gradient(to right, #a8edea, #fed6e3);
+      padding: 20px;
+    }
+    h1 { color: #2c3e50; }
+    #controls {
+      margin-bottom: 15px;
+    }
+    select, button {
+      font-size: 16px;
+      padding: 8px 12px;
+      margin: 5px;
+      border-radius: 5px;
+      border: 1px solid #333;
+    }
+    #board {
+      display: grid;
+      grid-gap: 6px;
+      justify-content: center;
+      margin: 20px auto;
+    }
+    .cell {
+      width: 60px;
+      height: 60px;
+      font-size: 28px;
+      font-weight: bold;
+      background-color: #fff;
+      border: 2px solid #2c3e50;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .cell:hover {
+      background-color: #f1f8ff;
+    }
+
+    /* ✨ LED FLASH saat diklik */
+    .flash {
+      animation: flash 0.3s;
+    }
+    @keyframes flash {
+      0%   { background-color: #ffff99; }
+      50%  { background-color: #ffeb3b; }
+      100% { background-color: #ffffff; }
+    }
+
+    #status {
+      font-size: 18px;
+      margin-top: 10px;
+      color: #2c3e50;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Tic Tac Toe LED + Getar</h1>
+  <div id="controls">
+    <label>Ukuran:</label>
+    <select id="sizeSelect">
+      <option value="3">3 x 3</option>
+      <option value="4">4 x 4</option>
+      <option value="5">5 x 5</option>
+    </select>
+
+    <label>Mode:</label>
+    <select id="gameMode">
+      <option value="pvp">Multiplayer</option>
+      <option value="ai">Vs AI</option>
+    </select>
+
+    <label>AI:</label>
+    <select id="aiLevel">
+      <option value="easy">Easy</option>
+      <option value="normal">Normal</option>
+      <option value="medium">Medium</option>
+      <option value="hard">Hard</option>
+      <option value="superhard">Super Hard</option>
+    </select>
+
+    <button onclick="startGame()">Mulai</button>
+    <button onclick="resetGame()">Ulangi</button>
+  </div>
+
+  <div id="board"></div>
+  <div id="status">Silakan pilih mode dan ukuran.</div>
+
+  <!-- 🔊 Suara klik -->
+  <audio id="clickX" src="https://www.myinstants.com/media/sounds/minecraft-click.mp3"></audio>
+  <audio id="clickO" src="https://www.myinstants.com/media/sounds/mouse-click.mp3"></audio>
+
+  <script>
+    const board = document.getElementById("board");
+    const status = document.getElementById("status");
+    const sizeSelect = document.getElementById("sizeSelect");
+    const gameModeSelect = document.getElementById("gameMode");
+    const aiLevelSelect = document.getElementById("aiLevel");
+    const soundX = document.getElementById("clickX");
+    const soundO = document.getElementById("clickO");
+
+    let size = 3, winLength = 3, gameMode = "pvp", aiLevel = "easy";
+    let cells = [], currentPlayer = "X", gameActive = false;
+
+    function getCell(x, y) {
+      if (x < 0 || y < 0 || x >= size || y >= size) return null;
+      return cells[y * size + x];
+    }
+
+    function checkDirection(x, y, dx, dy) {
+      let count = 1, curr = getCell(x, y).textContent;
+      for (let i = 1; i < winLength; i++) {
+        const c = getCell(x + i*dx, y + i*dy);
+        if (c && c.textContent === curr) count++; else break;
+      }
+      for (let i = 1; i < winLength; i++) {
+        const c = getCell(x - i*dx, y - i*dy);
+        if (c && c.textContent === curr) count++; else break;
+      }
+      return count >= winLength;
+    }
+
+    function checkWinner() {
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const cell = getCell(x, y);
+          if (!cell.textContent) continue;
+          if (
+            checkDirection(x, y, 1, 0) || checkDirection(x, y, 0, 1) ||
+            checkDirection(x, y, 1, 1) || checkDirection(x, y, 1, -1)
+          ) {
+            gameActive = false;
+            status.textContent = `Pemenang: ${cell.textContent}! 🎉`;
+            return;
+          }
+        }
+      }
+      if ([...cells].every(c => c.textContent)) {
+        gameActive = false;
+        status.textContent = "Seri! 😐";
+      }
+    }
+
+    function handleClick(e) {
+      if (!gameActive || e.target.textContent) return;
+      e.target.textContent = currentPlayer;
+      e.target.classList.add("flash");
+      setTimeout(() => e.target.classList.remove("flash"), 300);
+
+      playSound(currentPlayer);
+      vibrate();
+
+      checkWinner();
+      if (!gameActive) return;
+
+      currentPlayer = currentPlayer === "X" ? "O" : "X";
+      status.textContent = `Giliran: ${currentPlayer}`;
+      if (gameMode === "ai" && currentPlayer === "O") setTimeout(aiMove, 400);
+    }
+
+    function playSound(player) {
+      if (player === "X") soundX.play();
+      else soundO.play();
+    }
+
+    function vibrate() {
+      if (navigator.vibrate) navigator.vibrate(100);
+    }
+
+    function getEmptyCells() {
+      return cells.filter(c => !c.textContent);
+    }
+
+    function randomMove() {
+      const empty = getEmptyCells();
+      const rand = empty[Math.floor(Math.random() * empty.length)];
+      if (rand) {
+        rand.textContent = "O";
+        rand.classList.add("flash");
+        setTimeout(() => rand.classList.remove("flash"), 300);
+        playSound("O");
+        vibrate();
+      }
+    }
+
+    function findBestMove(mark) {
+      for (const cell of cells) {
+        if (!cell.textContent) {
+          cell.textContent = mark;
+          let win = false;
+          for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+              if (checkDirection(x, y, 1, 0) || checkDirection(x, y, 0, 1) ||
+                  checkDirection(x, y, 1, 1) || checkDirection(x, y, 1, -1)) win = true;
+            }
+          }
+          cell.textContent = "";
+          if (win) return cell;
+        }
+      }
+      return null;
+    }
+
+    function aiMove() {
+      if (!gameActive) return;
+      let move = null;
+      const empty = getEmptyCells();
+
+      if (aiLevel === "superhard" && size === 3) {
+        move = minimax(cells.map(c => c.textContent || ""), "O").index;
+        if (move !== undefined) {
+          const target = cells[move];
+          target.textContent = "O";
+          target.classList.add("flash");
+          setTimeout(() => target.classList.remove("flash"), 300);
+          playSound("O");
+          vibrate();
+        }
+      } else if (aiLevel === "hard" || aiLevel === "medium") {
+        move = findBestMove("O") || findBestMove("X");
+        if (move) {
+          move.textContent = "O";
+          move.classList.add("flash");
+          setTimeout(() => move.classList.remove("flash"), 300);
+          playSound("O");
+          vibrate();
+        } else randomMove();
+      } else if (aiLevel === "normal") {
+        move = findBestMove("X");
+        if (move) {
+          move.textContent = "O";
+          move.classList.add("flash");
+          setTimeout(() => move.classList.remove("flash"), 300);
+          playSound("O");
+          vibrate();
+        } else randomMove();
+      } else randomMove();
+
+      checkWinner();
+      if (gameActive) {
+        currentPlayer = "X";
+        status.textContent = `Giliran: ${currentPlayer}`;
+      }
+    }
+
+    function startGame() {
+      size = parseInt(sizeSelect.value);
+      winLength = size;
+      gameMode = gameModeSelect.value;
+      aiLevel = aiLevelSelect.value;
+      currentPlayer = "X";
+      gameActive = true;
+      cells = [];
+      board.innerHTML = "";
+
+      board.style.gridTemplateColumns = `repeat(${size}, 60px)`;
+      for (let i = 0; i < size * size; i++) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.addEventListener("click", handleClick);
+        board.appendChild(cell);
+        cells.push(cell);
+      }
+
+      status.textContent = `Giliran: ${currentPlayer}`;
+    }
+
+    function resetGame() {
+      cells.forEach(c => c.textContent = "");
+      currentPlayer = "X";
+      gameActive = true;
+      status.textContent = `Giliran: ${currentPlayer}`;
+    }
+
+    function minimax(boardArr, player) {
+      const hu = "X", ai = "O";
+      const winCombo = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+      ];
+      const empty = boardArr.map((v, i) => v === "" ? i : null).filter(i => i !== null);
+      const isWin = (b, p) => winCombo.some(w => w.every(i => b[i] === p));
+      if (isWin(boardArr, hu)) return {score: -10};
+      if (isWin(boardArr, ai)) return {score: 10};
+      if (empty.length === 0) return {score: 0};
+
+      const moves = [];
+      for (let i = 0; i < empty.length; i++) {
+        const move = { index: empty[i] };
+        boardArr[empty[i]] = player;
+        const result = minimax(boardArr, player === ai ? hu : ai);
+        move.score = result.score;
+        boardArr[empty[i]] = "";
+        moves.push(move);
+      }
+
+      let best = 0;
+      if (player === ai) {
+        let max = -Infinity;
+        for (let i = 0; i < moves.length; i++) {
+          if (moves[i].score > max) {
+            max = moves[i].score;
+            best = i;
+          }
+        }
+      } else {
+        let min = Infinity;
+        for (let i = 0; i < moves.length; i++) {
+          if (moves[i].score < min) {
+            min = moves[i].score;
+            best = i;
+          }
+        }
+      }
+      return moves[best];
+    }
+  </script>
+
+</body>
+</html>
